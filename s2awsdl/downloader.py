@@ -172,7 +172,7 @@ class S2AWSDownloader:
         if isinstance(dates, (list, tuple)):
             path_dict = {}
             for date in dates:
-                ret = self.download_images(tile, date, output_dir, bands)
+                ret = self.download_images(tile, date, output_dir, bands, resolution)
                 path_dict = {**path_dict, **ret}
         else:
             path_dict = {}
@@ -192,7 +192,10 @@ class S2AWSDownloader:
             day = dates.day
 
             for band in bands:
-                band_res = resolution or [key for key in BAND_RES if band in BAND_RES[key]][0]
+                if resolution:
+                    band_res = max([resolution, [key for key in BAND_RES if band in BAND_RES[key]][0]])
+                else:
+                    band_res = [key for key in BAND_RES if band in BAND_RES[key]][0]
                 im_s3_uri = f"/vsis3/{L2_PREFIX}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}m/{band}.jp2"
 
                 # Download and write image

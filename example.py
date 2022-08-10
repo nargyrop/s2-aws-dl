@@ -71,6 +71,6 @@ if __name__ == "__main__":
         tile=tileid,
         dates=dates,
         output_dir=output_path,
-        bands=["B8A", "B12"]
+        bands=["B8A", "B12"],
+        resolution=60
     )
-    print()
