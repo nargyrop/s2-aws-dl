@@ -1,7 +1,5 @@
 import argparse
-import json
 from datetime import datetime
-from pathlib import Path
 
 from s2awsdl.downloader import S2AWSDownloader
 
@@ -54,6 +52,10 @@ if __name__ == "__main__":
     end_date = datetime.strptime(end_date, "%Y-%m-%d")
     output_path = args.output_path
 
+    # Make sure the start date is lt the end date
+    if not start_date < end_date:
+        raise ValueError("Start date must be before the end date.")
+
     s2dl = S2AWSDownloader(
         access_keyid=args.access_key,
         secret_access_keyid=args.secret_access_key
@@ -65,9 +67,10 @@ if __name__ == "__main__":
         date_to=end_date
     )
 
-    s2dl.download_images(
+    ret = s2dl.download_images(
         tile=tileid,
         dates=dates,
         output_dir=output_path,
-        bands=["B08", "B8A", "B12", "TCI"]
+        bands=["B8A", "B12"]
     )
+    print()
