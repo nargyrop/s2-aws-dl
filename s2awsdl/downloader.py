@@ -1,4 +1,5 @@
 import datetime
+from importlib.resources import path
 from pathlib import Path
 from typing import List, Union
 
@@ -18,13 +19,13 @@ S2_BANDS = [
     "B10", "B11", "B12", "TCI"
     ]
 BAND_RES = {
-    "10m": [
+    "10": [
     "B02", "B03", "B04", "B08", "TCI"
     ],
-    "20m": [
+    "20": [
     "B05", "B06", "B07", "B8A", "B11", "B12"
     ],
-    "60m": [
+    "60": [
     "B01", "B09", "B10"
     ]
 }
@@ -161,6 +162,7 @@ class S2AWSDownloader:
         dates: Union[datetime.datetime, List],
         output_dir: Union[str, Path],
         bands: List = S2_BANDS,
+        resolution: int = None
     ) -> None:
 
         # create output path
@@ -168,10 +170,13 @@ class S2AWSDownloader:
         output_dir.mkdir(exist_ok=True, parents=True)
 
         if isinstance(dates, (list, tuple)):
+            path_dict = {}
             for date in dates:
-                self.download_images(tile, date, output_dir, bands)
+                ret = self.download_images(tile, date, output_dir, bands)
+                path_dict = {**path_dict, **ret}
         else:
-            # De-construtct tile id
+            path_dict = {}
+            # De-construct tile id
             if tile.startswith("T"):
                 tile = tile[1:]
             tileid1 = tile[:2]
@@ -187,10 +192,14 @@ class S2AWSDownloader:
             day = dates.day
 
             for band in bands:
-                band_res = [key for key in BAND_RES if band in BAND_RES[key]][0]
-                im_s3_uri = f"/vsis3/{L2_PREFIX}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}/{band}.jp2"
+                band_res = resolution or [key for key in BAND_RES if band in BAND_RES[key]][0]
+                im_s3_uri = f"/vsis3/{L2_PREFIX}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}m/{band}.jp2"
 
                 # Download and write image
                 arr, transf, proj, _ = IO().load_image(im_s3_uri)
-
-                IO().write_image(arr, output_date_dir.joinpath(band).as_posix(), transf, proj)
+                output_fpath = output_date_dir.joinpath(f"{band}-{band_res}.tif").as_posix()
+                IO().write_image(arr, output_fpath, transf, proj)
+                
+                path_dict[band] = output_fpath
+            
+        return path_dict
