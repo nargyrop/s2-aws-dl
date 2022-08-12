@@ -173,7 +173,7 @@ class S2AWSDownloader:
             path_dict = {}
             for date in dates:
                 ret = self.download_images(tile, date, output_dir, bands, resolution)
-                path_dict = {**path_dict, **ret}
+                path_dict[dates.strftime("%Y%m%d")] = {**path_dict, **ret}
         else:
             path_dict = {}
             # De-construct tile id
