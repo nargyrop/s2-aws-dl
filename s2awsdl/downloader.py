@@ -200,7 +200,7 @@ class S2AWSDownloader:
                 im_s3_uri = f"/vsis3/{L2_PREFIX}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}m/{band}.jp2"
 
                 # Download and write image
-                output_fpath = output_date_dir.joinpath(f"{band}-{band_res}.tif")
+                output_fpath = output_date_dir.joinpath(f"T{tile}_{band}_{band_res}.tif")
                 if (output_fpath.exists() and overwrite) or not output_fpath.exists():
                     arr, transf, proj, _ = IO().load_image(im_s3_uri)
                     IO().write_image(arr, output_fpath.as_posix(), transf, proj)
