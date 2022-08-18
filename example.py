@@ -13,6 +13,13 @@ if __name__ == "__main__":
         type=str
         )
     parser.add_argument(
+        "--processing-level", 
+        help="Sentinel-2 processing level ().",
+        required=True,
+        type=str,
+        choices=["L1C", "L2A"]
+        )
+    parser.add_argument(
         "--start-date", 
         help="Start date for search in YYYY-mm-dd format.",
         required=True,
@@ -46,6 +53,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tileid = args.tile_id
+    processing_level = args.processing_level
     start_date = args.start_date
     start_date = datetime.strptime(start_date, "%Y-%m-%d")
     end_date = args.end_date
@@ -63,6 +71,7 @@ if __name__ == "__main__":
 
     dates = s2dl.search_s2l2a(
         tile=tileid,
+        processing_level=processing_level,
         date_from=start_date,
         date_to=end_date
     )
@@ -72,5 +81,5 @@ if __name__ == "__main__":
         dates=dates,
         output_dir=output_path,
         bands=["B8A", "B12"],
-        resolution=60
+        resolution=20
     )

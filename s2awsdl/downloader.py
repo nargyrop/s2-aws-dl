@@ -29,7 +29,18 @@ BAND_RES = {
     "B01", "B09", "B10"
     ]
 }
-L2_PREFIX = "sentinel-s2-l2a/tiles"
+S3_PREFIX = {
+    "l1c": "sentinel-s2-l1c/tiles",
+    "l2a": "sentinel-s2-l2a/tiles"
+    }
+S3_BUCKETS = {
+    "l1c": "sentinel-s2-l1c",
+    "l2a": "sentinel-s2-l2a"
+    }
+XML_HEADERS = {
+    "l1c": "n1:Level-1C_Tile_ID",
+    "l2a": "n1:Level-2A_Tile_ID"
+}
 
 class S2AWSDownloader:
     def __init__(
@@ -45,10 +56,10 @@ class S2AWSDownloader:
 
         self.cloud_cov = 70
         self.nodata_cov = 10
-        self.l2_prefix = "sentinel-s2-l2a/tiles"
 
         # some placeholders
         self.s3_client = None
+        self.processing_level = None
 
         self._set_profiles()
     
@@ -101,7 +112,7 @@ class S2AWSDownloader:
                 for contents in resp['Contents']:
                    key = contents['Key']
 
-                   if key.endswith("R10m/B02.jp2"):
+                   if any([key.endswith(i) for i in ["R10m/B02.jp2", "0/B02.jp2"]]):
                        yield key
                    else:
                        continue
@@ -115,14 +126,21 @@ class S2AWSDownloader:
         date_to: datetime.datetime,
         cloud_cov: int = 100,
         nodata_cov: int = 100,
+        processing_level: str = "l2a"
         ) -> List:
 
-        # De-construtct tile id
+        # De-construct tile id
         if tile.startswith("T"):
             tile = tile[1:]
         tileid1 = tile[:2]
         tileid2 = tile[2:3]
         tileid3 = tile[3:]
+
+        # Check that a valid processing level has been used
+        self.processing_level = processing_level.lower()
+        if self.processing_level not in S3_BUCKETS:
+            raise ValueError("Wrong processing level was passed. \
+            Choose between L1C or L2A.")
 
         # dates
         dates = []  # to store sensing_dates
@@ -138,18 +156,25 @@ class S2AWSDownloader:
 
             obj_key = f"tiles/{tileid1}/{tileid2}/{tileid3}/{year}/{mon}/{day}/0/metadata.xml"
             try:
-                resp = self.s3_client.get_object(Bucket="sentinel-s2-l2a",
+                resp = self.s3_client.get_object(Bucket=S3_BUCKETS[self.processing_level],
                                         Key=obj_key, **{'RequestPayer': 'requester'})
             except:
                 continue
                     
             parsed_xml = xmltodict.parse(resp["Body"].read())
             cloudy = float(
-                parsed_xml['n1:Level-2A_Tile_ID']['n1:Quality_Indicators_Info']['Image_Content_QI']['CLOUDY_PIXEL_PERCENTAGE']
+                parsed_xml[
+                    XML_HEADERS[self.processing_level]
+                ]['n1:Quality_Indicators_Info']['Image_Content_QI']['CLOUDY_PIXEL_PERCENTAGE']
                 )
-            nodata = float(
-                parsed_xml['n1:Level-2A_Tile_ID']['n1:Quality_Indicators_Info']['Image_Content_QI']['NODATA_PIXEL_PERCENTAGE']
-                )
+            if self.processing_level == "l2a":
+                nodata = float(
+                    parsed_xml[
+                        XML_HEADERS[self.processing_level]
+                    ]['n1:Quality_Indicators_Info']['Image_Content_QI']['NODATA_PIXEL_PERCENTAGE']
+                    )
+            else:
+                nodata = 0
 
             if cloudy <= cloud_cov and nodata <= nodata_cov:
                 dates.append(search_date)
@@ -197,10 +222,14 @@ class S2AWSDownloader:
                     band_res = max([resolution, [key for key in BAND_RES if band in BAND_RES[key]][0]])
                 else:
                     band_res = [key for key in BAND_RES if band in BAND_RES[key]][0]
-                im_s3_uri = f"/vsis3/{L2_PREFIX}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}m/{band}.jp2"
+
+                if self.processing_level == "l2a":
+                    im_s3_uri = f"/vsis3/{S3_PREFIX[self.processing_level]}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/R{band_res}m/{band}.jp2"
+                else:
+                    im_s3_uri = f"/vsis3/{S3_PREFIX[self.processing_level]}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/{band}.jp2"
 
                 # Download and write image
-                output_fpath = output_date_dir.joinpath(f"T{tile}_{band}_{band_res}m.tif")
+                output_fpath = output_date_dir.joinpath(f"T{tile}_{dates.strftime('%Y%m%d')}_{self.processing_level.upper()}_{band}.tif")
                 if (output_fpath.exists() and overwrite) or not output_fpath.exists():
                     arr, transf, proj, _ = IO().load_image(im_s3_uri)
                     IO().write_image(arr, output_fpath.as_posix(), transf, proj)
