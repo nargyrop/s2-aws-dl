@@ -1,0 +1,5 @@
+boto3==1.24.46
+GDAL>=3.*
+resens @ git+https://github.com/nargyrop/resens.git@ebaf42698b465abe79ad4f0f5de07ead5292df96
+tqdm
+xmltodict
