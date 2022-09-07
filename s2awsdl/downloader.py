@@ -1,5 +1,4 @@
 import datetime
-from importlib.resources import path
 from pathlib import Path
 from typing import List, Union
 
@@ -188,6 +187,7 @@ class S2AWSDownloader:
         output_dir: Union[str, Path],
         bands: List = S2_BANDS,
         resolution: int = None,
+        download_cloud: bool = True,
         overwrite: bool = False
     ) -> None:
 
@@ -217,6 +217,18 @@ class S2AWSDownloader:
             month = dates.month
             day = dates.day
 
+            # Download the L2 cloud mask
+            if download_cloud and self.processing_level == "l2a":
+                im_s3_uri = f"/vsis3/{S3_PREFIX[self.processing_level]}/{tileid1}/{tileid2}/{tileid3}/{year}/{month}/{day}/0/qi/CLD_20m.jp2"
+                
+                output_fpath = output_date_dir.joinpath(f"T{tile}_{dates.strftime('%Y%m%d')}_{self.processing_level.upper()}_CLD.tif")
+                if (output_fpath.exists() and overwrite) or not output_fpath.exists():
+                    arr, transf, proj, _ = IO().load_image(im_s3_uri)
+                    IO().write_image(arr, output_fpath.as_posix(), transf, proj)
+
+                path_dict["CLD"] = output_fpath
+
+            # Download each band
             for band in bands:
                 if resolution:
                     band_res = max([resolution, [key for key in BAND_RES if band in BAND_RES[key]][0]])

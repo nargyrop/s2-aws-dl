@@ -80,6 +80,6 @@ if __name__ == "__main__":
         tile=tileid,
         dates=dates,
         output_dir=output_path,
-        bands=["B8A", "B12"],
-        resolution=20
+        bands=["B02", "B03", "B04", "B08"],
+        resolution=10
     )
