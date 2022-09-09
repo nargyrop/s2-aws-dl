@@ -4,7 +4,7 @@ from typing import List, Union
 
 import boto3
 import xmltodict
-from resens.rasterlib import IO
+from resens import io
 from tqdm import tqdm
 
 try:
@@ -223,8 +223,8 @@ class S2AWSDownloader:
                 
                 output_fpath = output_date_dir.joinpath(f"T{tile}_{dates.strftime('%Y%m%d')}_{self.processing_level.upper()}_CLD.tif")
                 if (output_fpath.exists() and overwrite) or not output_fpath.exists():
-                    arr, transf, proj, _ = IO().load_image(im_s3_uri)
-                    IO().write_image(arr, output_fpath.as_posix(), transf, proj)
+                    arr, transf, proj, _ = io.load_image(im_s3_uri)
+                    io.write_image(arr, output_fpath.as_posix(), transf, proj)
 
                 path_dict["CLD"] = output_fpath
 
@@ -243,8 +243,8 @@ class S2AWSDownloader:
                 # Download and write image
                 output_fpath = output_date_dir.joinpath(f"T{tile}_{dates.strftime('%Y%m%d')}_{self.processing_level.upper()}_{band}.tif")
                 if (output_fpath.exists() and overwrite) or not output_fpath.exists():
-                    arr, transf, proj, _ = IO().load_image(im_s3_uri)
-                    IO().write_image(arr, output_fpath.as_posix(), transf, proj)
+                    arr, transf, proj, _ = io.load_image(im_s3_uri)
+                    io.write_image(arr, output_fpath.as_posix(), transf, proj)
                 
                 path_dict[band] = output_fpath
             
